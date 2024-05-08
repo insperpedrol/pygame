@@ -1,4 +1,6 @@
 # pygame
+
+
 Platformer Pygame
 
 Bem vindo ao documento de instrucoes do projeto pygame

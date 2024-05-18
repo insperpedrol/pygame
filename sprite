@@ -1,0 +1,331 @@
+import pygame
+import sys
+
+# Inicializando o Pygame
+pygame.init()
+
+# Definindo algumas constantes
+SCREEN_WIDTH = 564
+SCREEN_HEIGHT = 780
+FPS = 30
+
+# Definindo cores
+WHITE = (255, 255, 255)
+
+# Criando a janela
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Animação de Sprite")
+
+# Carregando a imagem de plano de fundo
+background_image = pygame.image.load("sprites/graphics/fundo.png").convert()
+
+# Função para redimensionar as imagens dos jogadores
+def resize_image(image, width, height):
+    return pygame.transform.scale(image, (width, height))
+
+# Carregando os sprites dos jogadores e redimensionando
+player1_idle = resize_image(pygame.image.load("sprites/graphics/player1.png"), 30, 30)
+player1_run1 = resize_image(pygame.image.load("sprites/graphics/playerrun1.png"), 30, 30)
+player1_run2 = resize_image(pygame.image.load("sprites/graphics/playerrun2.png"), 30, 30)
+player1_run3 = resize_image(pygame.image.load("sprites/graphics/playerrun3.png"), 30, 30)
+player1_jump = resize_image(pygame.image.load("sprites/graphics/playerjump.png"), 30, 30)
+
+player2_idle = resize_image(pygame.image.load("sprites/graphics/slime1.png"), 30, 30)
+player2_run1 = resize_image(pygame.image.load("sprites/graphics/slime1.png"), 30, 30)
+player2_run2 = resize_image(pygame.image.load("sprites/graphics/slime2.png"), 30, 30)
+player2_run3 = resize_image(pygame.image.load("sprites/graphics/slime3.png"), 30, 30)
+player2_jump = resize_image(pygame.image.load("sprites/graphics/slime1.png"), 30, 30)
+
+# Lista de sprites para animação de corrida
+run_sprites1 = [player1_run1, player1_run2, player1_run3]
+run_sprites2 = [player2_run1, player2_run2, player2_run3]
+current_run_sprite = 0
+
+# Carregando a imagem da caixa e redimensionando
+box_image = resize_image(pygame.image.load("sprites/graphics/piso1.png"), 40, 40)
+
+# Carregando a imagem do bloco de fogo e redimensionando
+fire_block_image = resize_image(pygame.image.load("sprites/graphics/fogo.png"), 25, 25)
+
+# Definindo a posição da caixa
+box_rect = box_image.get_rect()
+
+# Definindo as coordenadas das plataformas
+platform_coordinates = [
+    (0  , 80),
+    (40 , 80),
+    (80, 80),
+    (120, 80),
+    (160, 80),
+    (200, 80),
+    (460, 80),
+    (500, 80),
+    (540, 80),
+    (0  , 200),
+    (40 , 200),
+    (150, 200),
+    (190, 200),
+    (230, 200),
+    (270, 200),
+    (300, 200),
+    (340, 200),
+    (380, 200),
+    (420, 200),
+    (460, 200),
+    (0, 320),
+    (40 ,320),
+    (80, 320),
+    (120, 320),
+    (160, 320),
+    (200, 320),
+    (240, 320),
+    (280 ,320),
+    (320, 320),
+    (360, 320),
+    (400, 320),
+    (440, 320),
+    (0  , 440),
+    (40 , 440),
+    (120, 440),
+    (160, 440),
+    (240, 440),
+    (280, 440),
+    (320, 440),
+    (360 ,440),
+    (440, 440),
+    (480  , 440),
+    (520 , 440),
+    (560, 440),
+    (40, 560),
+    (80 ,560),
+    (160 ,560),
+    (200, 560),
+    (280, 560),
+    (320, 560),
+    (400 ,560),
+    (440 ,560),
+    (0, 680),
+    (40, 680),
+    (80, 680),
+    (120, 680),
+    (160, 680),
+    (200, 680),
+    (280, 680),
+    (320, 680),
+    (360, 680),
+    (400, 680),
+    (440, 680),
+    (480, 680),
+    (520, 680),
+    (560, 680),
+    (0, 770),
+    (40, 770),
+    (80, 770),
+    (120, 770),
+    (160, 770),
+    (200, 770),
+    (240, 770),
+    (280, 770),
+    (320, 770),
+    (360, 770),
+    (400, 770),
+    (440, 770),
+    (480, 770),
+    (520, 770),
+    (560, 770),
+]
+
+# Definindo as coordenadas dos blocos de fogo
+fire_block_coordinates = [
+    (90, 80),
+    (115, 80),
+    (130, 80),
+    (300, 440),
+    (325, 440)
+]
+
+# Lista para armazenar os retângulos das plataformas
+platform_rects = []
+
+# Lista para armazenar os retângulos dos blocos de fogo
+fire_block_rects = []
+
+# Criando os blocos de fogo e armazenando seus retângulos
+for coord in fire_block_coordinates:
+    fire_block_rect = fire_block_image.get_rect()
+    fire_block_rect.topleft = coord
+    fire_block_rects.append(fire_block_rect)
+
+# Criando as plataformas e armazenando seus retângulos
+for coord in platform_coordinates:
+    platform_rect = box_image.get_rect()
+    platform_rect.topleft = coord
+    platform_rects.append(platform_rect)
+
+# Definindo o retângulo para o jogador 1
+player1_rect = player1_idle.get_rect()
+player1_rect.center = (SCREEN_WIDTH // 4, SCREEN_HEIGHT - player1_rect.height)
+
+# Definindo o retângulo para o jogador 2
+player2_rect = player2_idle.get_rect()
+player2_rect.center = (3 * SCREEN_WIDTH // 4, SCREEN_HEIGHT - player2_rect.height)
+
+# Definindo variáveis para controle de movimento do jogador 1
+moving_left_1 = False
+moving_right_1 = False
+jumping_1 = False
+jump_count_1 = 10
+
+# Definindo variáveis para controle de movimento do jogador 2
+moving_left_2 = False
+moving_right_2 = False
+jumping_2 = False
+jump_count_2 = 10
+
+# Loop principal do jogo
+clock = pygame.time.Clock()
+
+while True:
+    screen.blit(background_image, (0, 0))  # Desenha a imagem de plano de fundo
+
+    # Desenhe as plataformas na tela
+    for platform_rect in platform_rects:
+        screen.blit(box_image, platform_rect)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        elif event.type == pygame.KEYDOWN:
+            # Controles para o jogador 1
+            if event.key == pygame.K_a:
+                moving_left_1 = True
+            elif event.key == pygame.K_d:
+                moving_right_1 = True
+            elif event.key == pygame.K_w:
+                if not jumping_1:
+                    jumping_1 = True
+                    jump_count_1 = 10
+            # Controles para o jogador 2
+            elif event.key == pygame.K_LEFT:
+                moving_left_2 = True
+            elif event.key == pygame.K_RIGHT:
+                moving_right_2 = True
+            elif event.key == pygame.K_UP:
+                if not jumping_2:
+                    jumping_2 = True
+                    jump_count_2 = 10
+
+        elif event.type == pygame.KEYUP:
+            # Controles para o jogador 1
+            if event.key == pygame.K_a:
+                moving_left_1 = False
+            elif event.key == pygame.K_d:
+                moving_right_1 = False
+            # Controles para o jogador 2
+            elif event.key == pygame.K_LEFT:
+                moving_left_2 = False
+            elif event.key == pygame.K_RIGHT:
+                moving_right_2 = False
+
+
+    # Função para detecção de colisão entre dois retângulos
+    def check_collision(rect1, rect2):
+        return rect1.colliderect(rect2)
+
+    # Atualização da movimentação do jogador 1
+    if moving_left_1:
+        player1_rect.x -= 5
+        for platform_rect in platform_rects:
+            if player1_rect.colliderect(platform_rect):
+                if player1_rect.right > platform_rect.left:  # Verifica se está colidindo à esquerda
+                    player1_rect.right = platform_rect.left
+                break
+        current_run_sprite = (current_run_sprite + 1) % len(run_sprites1)
+    elif moving_right_1:
+        player1_rect.x += 5
+        for platform_rect in platform_rects:
+            if player1_rect.colliderect(platform_rect):
+                if player1_rect.left < platform_rect.right:  # Verifica se está colidindo à direita
+                    player1_rect.left = platform_rect.right
+                break
+        current_run_sprite = (current_run_sprite + 1) % len(run_sprites1)
+
+    # Simulação de pulo do jogador 1
+    if jumping_1:
+        player1_rect.y -= jump_count_1
+        jump_count_1 -= 1
+        on_ground_1 = False
+        for platform_rect in platform_rects:
+            if player1_rect.colliderect(platform_rect):
+                if player1_rect.bottom == platform_rect.top:
+                    on_ground_1 = True
+                    break
+        if on_ground_1 or jump_count_1 <= 0:
+            jumping_1 = False
+            jump_count_1 = 10
+
+    # Atualização da movimentação do jogador 2 (mesmos ajustes que o jogador 1)
+    if moving_left_2:
+        player2_rect.x -= 5
+        for platform_rect in platform_rects:
+            if player2_rect.colliderect(platform_rect):
+                if player2_rect.right > platform_rect.left:
+                    player2_rect.right = platform_rect.left
+                break
+        current_run_sprite = (current_run_sprite + 1) % len(run_sprites2)
+    elif moving_right_2:
+        player2_rect.x += 5
+        for platform_rect in platform_rects:
+            if player2_rect.colliderect(platform_rect):
+                if player2_rect.left < platform_rect.right:
+                    player2_rect.left = platform_rect.right
+                break
+        current_run_sprite = (current_run_sprite + 1) % len(run_sprites2)
+
+    # Simulação de pulo do jogador 2
+    if jumping_2:
+        player2_rect.y -= jump_count_2
+        jump_count_2 -= 1
+        on_ground_2 = False
+        for platform_rect in platform_rects:
+            if player2_rect.colliderect(platform_rect):
+                if player2_rect.bottom == platform_rect.top:
+                    on_ground_2 = True
+                    break
+        if on_ground_2 or jump_count_2 <= 0:
+            jumping_2 = False
+            jump_count_2 = 10
+
+
+
+    # Desenhe os blocos de fogo na tela
+    for fire_block_rect in fire_block_rects:
+        screen.blit(fire_block_image, fire_block_rect)
+
+    # Desenhar os jogadores na tela
+    if jumping_1:
+        screen.blit(player1_jump, player1_rect)
+    elif moving_left_1 or moving_right_1:
+        if moving_left_1:
+            screen.blit(pygame.transform.flip(run_sprites1[current_run_sprite], True, False), player1_rect)
+        else:
+            screen.blit(run_sprites1[current_run_sprite], player1_rect)
+    else:
+        screen.blit(player1_idle, player1_rect)
+
+    if jumping_2:
+        screen.blit(player2_jump, player2_rect)
+    elif moving_left_2 or moving_right_2:
+        if moving_left_2:
+            screen.blit(pygame.transform.flip(run_sprites2[current_run_sprite], True, False), player2_rect)
+        else:
+            screen.blit(run_sprites2[current_run_sprite], player2_rect)
+    else:
+        screen.blit(player2_idle, player2_rect)
+
+    
+
+    # Atualizando a tela
+    pygame.display.flip()
+    clock.tick(FPS)

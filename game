@@ -1,10 +1,10 @@
-from typing import Any
 import pygame
 from pygame.locals import *
 
 # Inicializando o Pygame
 pygame.init()
 
+#Relógio do jogo 
 clock= pygame.time.Clock()
 FPS=50
 
@@ -13,15 +13,17 @@ SCREEN_WIDTH = 550
 SCREEN_HEIGHT = 750
 
 # Constantes do jogo
-tile_size=40
+tile_size=40 #tamanho dos quadradinhos que "separam" o mapa
+game_over=0
 
 # Criando a janela
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Astronaut")
 
 # Carregando Imagens
-background_image = pygame.image.load("sprites/graphics/fundo.png").convert()
-restart_image= pygame.image.load("sprites/graphics/restart.png").convert()
+background_image = pygame.image.load("sprites/graphics/fundo.png")
+restart_img= pygame.image.load("sprites/graphics/restart.png")
+restart_image= pygame.transform.scale(restart_img,(90,90))
 
 
 def draw_grid():
@@ -32,16 +34,104 @@ def draw_grid():
 # Cria a class do player
 class Player():
     def __init__(self, x, y):
+        self.reset(x,y)
+    def update(self,game_over):   
+        # deslocamento e velocidade
+        dx=0
+        dy=0
+        Vcorrida=5
+
+        if game_over==0:
+            # comandos no teclado
+            key= pygame.key.get_pressed()
+            if key[pygame.K_LEFT]:
+                dx-=5
+                self.contador+=1
+                self.direcao=2
+            if key[pygame.K_RIGHT]:
+                dx+=5
+                self.contador+=1
+                self.direcao=1
+            if key[pygame.K_SPACE] and self.jumped==False  and self.no_chao==True:
+                self.Vy=-5
+                self.jumped== True
+            if key[pygame.K_SPACE]==False:
+                self.jumped=False
+            if key[pygame.K_RIGHT]==False and key[pygame.K_LEFT]==False:  
+                self.contador=0
+                self.indice=0
+                if self.direcao==1:
+                    self.image=self.frames_right[self.indice]
+                if self.direcao==2:
+                    self.image=self.frames_left[self.indice]     
+                
+            # animação corrida
+
+            if self.contador>Vcorrida:
+                self.contador=0 
+                self.indice+=1
+                if self.indice>=len(self.frames_right):
+                    self.indice=0
+                if self.direcao==1:
+                    self.image=self.frames_right[self.indice]
+                if self.direcao==2:
+                    self.image=self.frames_left[self.indice]
+
+            # adiciona gravidade
+            self.Vy+= 1
+            if self.Vy>10:
+                self.Vy=10
+
+            dy+=self.Vy
+            # checa colisão
+            self.no_chao=False
+            for tile in mundo.tile_list:
+                if tile[1].colliderect(self.rect.x +dx, self.rect.y, self.largura, self.comprimento):
+                    dx=0
+                if tile[1].colliderect(self.rect.x, self.rect.y +dy, self.largura, self.comprimento):
+                # Analisa tds as colisoes antes de acontecer
+                    if self.Vy <0:
+                        dy=tile[1].bottom- self.rect.top
+                        self.Vy=0
+                    elif self.Vy>=0:
+                        dy=tile[1].top- self.rect.bottom
+                        self.Vy=0
+                        self.no_chao=True
+            
+            # ver colisoes mortais(Inimigo ou fogo)
+            if pygame.sprite.spritecollide(self, caveiras, False):
+                game_over=1
+            if pygame.sprite.spritecollide(self, fogos, False):
+                game_over=1
+            
+
+            # atualiza posição jogador
+            self.rect.x+=dx
+            self.rect.y+=dy
+
+        if self.rect.bottom> SCREEN_HEIGHT:
+            self.rect.bottom= SCREEN_HEIGHT
+
+        elif game_over==1:
+            self.image=self.morto
+        # desenha jogador
+        screen.blit(self.image, self.rect)
+        return game_over
+    
+    def reset (self,x, y):
         self.frames_right=[]
         self.frames_left=[]
         self.indice=0
         self.contador=0
+        #carrega os frames de animação e ajusta pra direita e esquerda
         lista_img= [pygame.image.load("sprites/graphics/player1.png"),pygame.image.load("sprites/graphics/playerrun1.png"),pygame.image.load("sprites/graphics/playerrun2.png"),pygame.image.load("sprites/graphics/playerrun3.png")]
         for frame in lista_img:
             img_right= pygame.transform.scale(frame,(30,30))
             img_left= pygame.transform.flip(img_right,True, False)
             self.frames_right.append(img_right)
             self.frames_left.append(img_left)
+        img_morto=pygame.image.load("sprites/graphics/playermorto.png")
+        self.morto= pygame.transform.scale(img_morto,(30,30))
         self.image= self.frames_right[self.indice]
         self.rect= self.image.get_rect()
         self.largura=self.image.get_width()
@@ -51,75 +141,7 @@ class Player():
         self.Vy= 0
         self.jumped= False  
         self.direcao=0
-    def update(self):   
-        # deslocamento
-        dx=0
-        dy=0
-        Vcorrida=5
-        # comandos no teclado
-        key= pygame.key.get_pressed()
-        if key[pygame.K_LEFT]:
-            dx-=5
-            self.contador+=1
-            self.direcao=2
-        if key[pygame.K_RIGHT]:
-            dx+=5
-            self.contador+=1
-            self.direcao=1
-        if key[pygame.K_SPACE] and self.jumped==False:
-            self.Vy=-5
-            self.jumped== True
-        if key[pygame.K_SPACE]==False:
-            self.jumped=False
-        if key[pygame.K_RIGHT]==False and key[pygame.K_LEFT]==False :  
-            self.contador=0
-            self.indice=0
-            if self.direcao==1:
-                self.image=self.frames_right[self.indice]
-            if self.direcao==2:
-                self.image=self.frames_left[self.indice]     
-            
-        # animação corrida
-
-        if self.contador>Vcorrida:
-            self.contador=0 
-            self.indice+=1
-            if self.indice>=len(self.frames_right):
-                self.indice=0
-            if self.direcao==1:
-                self.image=self.frames_right[self.indice]
-            if self.direcao==2:
-                self.image=self.frames_left[self.indice]
-
-        # adiciona gravidade
-        self.Vy+= 1
-        if self.Vy>10:
-             self.Vy=10
-
-        dy+=self.Vy
-        # checa colisão
-        for tile in mundo.tile_list:
-            if tile[1].colliderect(self.rect.x +dx, self.rect.y, self.largura, self.comprimento):
-                dx=0
-            if tile[1].colliderect(self.rect.x, self.rect.y +dy, self.largura, self.comprimento):
-            # Analisa tds as colisoes antes de acontecer
-                if self.Vy <0:
-                    dy=tile[1].bottom- self.rect.top
-                    self.Vy=0
-                elif self.Vy>=0:
-                    dy=tile[1].top- self.rect.bottom
-                    self.Vy=0
-                     
-
-        # atualiza posição jogador
-        self.rect.x+=dx
-        self.rect.y+=dy
-
-        if self.rect.bottom> SCREEN_HEIGHT:
-            self.rect.bottom= SCREEN_HEIGHT
-        # desenha jogador
-        screen.blit(self.image, self.rect)
-         
+        self.no_chao=True
 
 # Cria a class do mundo
 
@@ -140,8 +162,8 @@ class World():
                         tile= (img, img_rect)
                         self.tile_list.append(tile)
                 if quadradinnho==2:
-                    slime=Inimigo(colunas* tile_size,linhas*tile_size)
-                    slimes.add(slime)
+                    caveira=Inimigo(colunas* tile_size,linhas*tile_size)
+                    caveiras.add(caveira)
                 if quadradinnho==3:
                     fogo= Fogo(colunas* tile_size,linhas*tile_size)
                     fogos.add(fogo)
@@ -161,9 +183,22 @@ class Botao ():
         self.rect= self.image.get_rect()
         self.rect.x=x
         self.rect.y=y
+        self.clicked= False
 
     def draw(self):
-        screen.blit(self.image,self.rect)
+        
+        continua= False
+        # pega posição do botao
+        posicao_botao= pygame.mouse.get_pos()
+        if self.rect.collidepoint(posicao_botao):
+            if pygame.mouse.get_pressed()[0]==1 and self.clicked== False:
+                self.clicked=True
+                continua= True
+        if pygame.mouse.get_pressed()[0]==0:
+            self.clicked= False
+
+        screen.blit(self.image, self.rect)
+        return continua
 
 
 
@@ -180,9 +215,9 @@ class Inimigo(pygame.sprite.Sprite):
     def update(self):
         self.rect.x+=self.direcao
         self.dx+=1
-        if self.dx>120:
+        if abs(self.dx)>50:
             self.direcao*= (-1)
-            self.dx=0
+            self.dx*=(-1)
 
 class Fogo(pygame.sprite.Sprite):
     def __init__(self, x ,y):
@@ -204,7 +239,7 @@ mapa=[
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 [1,1,0,0,1,1,1,1,1,1,3,3,1,1],
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,2,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,2,0,0,0,0,0,0,0,0,0,0,0],
 [1,1,1,1,1,1,1,1,1,1,0,0,0,0],
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -219,11 +254,11 @@ mapa=[
 ]
 
 player= Player(50, SCREEN_HEIGHT-60)
-slimes= pygame.sprite.Group()
+caveiras= pygame.sprite.Group()
 fogos=pygame.sprite.Group()
 mundo= World(mapa)
 
-restart= Botao(SCREEN_WIDTH//2, SCREEN_HEIGHT//2, restart_image)
+restart= Botao(SCREEN_WIDTH//2 -50, SCREEN_HEIGHT//2, restart_image)
 
 #Código Principal
 run= True 
@@ -234,12 +269,18 @@ while run:
     
     mundo.draw()
 
-    slimes.update()
-    slimes.draw(screen)
+    if game_over==0:
+        caveiras.update()
+
+    caveiras.draw(screen)
     fogos.draw(screen)
 
-    player.update()
+    game_over= player.update(game_over)
 
+    if game_over==1:
+        if restart.draw():
+            player.reset(50, SCREEN_HEIGHT-60)
+            game_over=0
     draw_grid()
 
 

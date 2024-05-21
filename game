@@ -1,0 +1,179 @@
+import pygame
+from pygame.locals import *
+
+# Inicializando o Pygame
+pygame.init()
+
+clock= pygame.time.Clock()
+FPS=50
+
+# Definindo algumas constantes da janela   
+SCREEN_WIDTH = 550
+SCREEN_HEIGHT = 750
+
+# Constantes do jogo
+tile_size=40
+
+# Criando a janela
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Astronaut")
+
+# Carregando Imagens
+background_image = pygame.image.load("sprites/graphics/fundo.png").convert()
+
+def draw_grid():
+	for line in range(0, 20):
+		pygame.draw.line(screen, (255, 255, 255), (0, line * tile_size), (SCREEN_WIDTH, line * tile_size))
+		pygame.draw.line(screen, (255, 255, 255), (line * tile_size, 0), (line * tile_size, SCREEN_HEIGHT))
+
+# Cria a class do player
+class Player():
+    def __init__(self, x, y):
+        self.frames_right=[]
+        self.frames_left=[]
+        self.indice=0
+        self.contador=0
+        lista_img= [pygame.image.load("sprites/graphics/player1.png"),pygame.image.load("sprites/graphics/playerrun1.png"),pygame.image.load("sprites/graphics/playerrun2.png"),pygame.image.load("sprites/graphics/playerrun3.png")]
+        for frame in lista_img:
+            img_right= pygame.transform.scale(frame,(30,30))
+            img_left= pygame.transform.flip(img_right,True, False)
+            self.frames_right.append(img_right)
+            self.frames_left.append(img_left)
+        self.image= self.frames_right[self.indice]
+        self.rect= self.image.get_rect()
+        self.rect.x=x
+        self.rect.y=y 
+        self.Vy= 0
+        self.jumped= False  
+        self.direcao=0
+    def update(self):   
+        # deslocamento
+        dx=0
+        dy=0
+        Vcorrida=5
+        # comandos no teclado
+        key= pygame.key.get_pressed()
+        if key[pygame.K_LEFT]:
+            dx-=5
+            self.contador+=1
+            self.direcao=2
+        if key[pygame.K_RIGHT]:
+            dx+=5
+            self.contador+=1
+            self.direcao=1
+        if key[pygame.K_SPACE] and self.jumped==False:
+            self.Vy=-5
+            self.jumped== True
+        if key[pygame.K_SPACE]==False:
+            self.jumped=False
+        if key[pygame.K_RIGHT]==False and key[pygame.K_LEFT]==False :  
+            self.contador=0
+            self.indice=0
+            if self.direcao==1:
+                self.image=self.frames_right[self.indice]
+            if self.direcao==2:
+                self.image=self.frames_left[self.indice]     
+
+        # animação corrida
+
+        if self.contador>Vcorrida:
+            self.contador=0 
+            self.indice+=1
+            if self.indice>=len(self.frames_right):
+                self.indice=0
+            if self.direcao==1:
+                self.image=self.frames_right[self.indice]
+            if self.direcao==2:
+                self.image=self.frames_left[self.indice]
+
+        # adiciona gravidade
+        self.Vy+= 1
+        if self.Vy>10:
+             self.Vy=10
+
+        dy+=self.Vy
+        # checa colisão
+        # atualiza posição jogador
+        self.rect.x+=dx
+        self.rect.y+=dy
+
+        if self.rect.bottom> SCREEN_HEIGHT:
+            self.rect.bottom= SCREEN_HEIGHT
+        # desenha jogador
+        screen.blit(self.image, self.rect)
+         
+
+# Cria a class do mundo
+
+class World():
+    def __init__(self, data):
+        self.tile_list=[]
+        # carregando imagens
+        platform_image = pygame.image.load("sprites/graphics/piso1.png")
+        linhas=0
+        for linha in data:
+            colunas=0
+            for quadradinnho in linha:
+                if quadradinnho==1:
+                        img= pygame.transform.scale(platform_image,(tile_size,tile_size))
+                        img_rect= img.get_rect()
+                        img_rect.x= colunas*tile_size
+                        img_rect.y= linhas*tile_size
+                        tile= (img, img_rect)
+                        self.tile_list.append(tile)
+                colunas+=1
+            linhas+=1
+    
+    # desenha o cenário
+    def draw(self):
+        for tile in self.tile_list:
+            screen.blit(tile[0],tile[1])
+            
+    
+                        
+# lista criacao mapa
+mapa=[
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[1,1,1,1,1,0,0,0,0,1,1,1,1,1],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[1,1,0,0,1,1,1,1,1,1,0,0,1,1],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[1,1,1,0,0,1,1,1,1,1,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,1,1,0,0,0,0,0,1,1,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,0,0,0,0,0,0,0,0,0,0,1,1,1],
+[1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+]
+
+player= Player(50, SCREEN_HEIGHT-60)
+mundo= World(mapa)
+
+#Código Principal
+run= True 
+while run:
+
+    clock.tick(FPS)
+    screen.blit(background_image, (0, 0))   
+    
+    mundo.draw()
+
+    player.update()
+
+    draw_grid()
+
+
+    for event in pygame.event.get():
+        if event.type ==pygame.QUIT:
+            run=False
+
+    pygame.display.update()
+pygame.quit()

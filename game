@@ -1,3 +1,4 @@
+from typing import Any
 import pygame
 from pygame.locals import *
 
@@ -20,6 +21,8 @@ pygame.display.set_caption("Astronaut")
 
 # Carregando Imagens
 background_image = pygame.image.load("sprites/graphics/fundo.png").convert()
+restart_image= pygame.image.load("sprites/graphics/restart.png").convert()
+
 
 def draw_grid():
 	for line in range(0, 20):
@@ -41,6 +44,8 @@ class Player():
             self.frames_left.append(img_left)
         self.image= self.frames_right[self.indice]
         self.rect= self.image.get_rect()
+        self.largura=self.image.get_width()
+        self.comprimento=self.image.get_height()
         self.rect.x=x
         self.rect.y=y 
         self.Vy= 0
@@ -73,7 +78,7 @@ class Player():
                 self.image=self.frames_right[self.indice]
             if self.direcao==2:
                 self.image=self.frames_left[self.indice]     
-
+            
         # animação corrida
 
         if self.contador>Vcorrida:
@@ -93,6 +98,19 @@ class Player():
 
         dy+=self.Vy
         # checa colisão
+        for tile in mundo.tile_list:
+            if tile[1].colliderect(self.rect.x +dx, self.rect.y, self.largura, self.comprimento):
+                dx=0
+            if tile[1].colliderect(self.rect.x, self.rect.y +dy, self.largura, self.comprimento):
+            # Analisa tds as colisoes antes de acontecer
+                if self.Vy <0:
+                    dy=tile[1].bottom- self.rect.top
+                    self.Vy=0
+                elif self.Vy>=0:
+                    dy=tile[1].top- self.rect.bottom
+                    self.Vy=0
+                     
+
         # atualiza posição jogador
         self.rect.x+=dx
         self.rect.y+=dy
@@ -121,6 +139,14 @@ class World():
                         img_rect.y= linhas*tile_size
                         tile= (img, img_rect)
                         self.tile_list.append(tile)
+                if quadradinnho==2:
+                    slime=Inimigo(colunas* tile_size,linhas*tile_size)
+                    slimes.add(slime)
+                if quadradinnho==3:
+                    fogo= Fogo(colunas* tile_size,linhas*tile_size)
+                    fogos.add(fogo)
+
+
                 colunas+=1
             linhas+=1
     
@@ -128,7 +154,45 @@ class World():
     def draw(self):
         for tile in self.tile_list:
             screen.blit(tile[0],tile[1])
-            
+
+class Botao ():
+    def __init__(self, x, y, image):
+        self.image= image
+        self.rect= self.image.get_rect()
+        self.rect.x=x
+        self.rect.y=y
+
+    def draw(self):
+        screen.blit(self.image,self.rect)
+
+
+
+class Inimigo(pygame.sprite.Sprite):
+    def __init__(self, x ,y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image=pygame.image.load("sprites/graphics/caveira.png")
+        self.image=pygame.transform.scale(self.image,(25,25))
+        self.rect= self.image.get_rect()
+        self.rect.x=x
+        self.rect.y=y
+        self.direcao= 1
+        self.dx=0
+    def update(self):
+        self.rect.x+=self.direcao
+        self.dx+=1
+        if self.dx>120:
+            self.direcao*= (-1)
+            self.dx=0
+
+class Fogo(pygame.sprite.Sprite):
+    def __init__(self, x ,y):
+        pygame.sprite.Sprite.__init__(self)
+        image=pygame.image.load("sprites/graphics/fogo.png")
+        self.image=pygame.transform.scale(image,(40,50))
+        self.rect= self.image.get_rect()
+        self.rect.x=x
+        self.rect.y=y-10
+
     
                         
 # lista criacao mapa
@@ -138,9 +202,9 @@ mapa=[
 [1,1,1,1,1,0,0,0,0,1,1,1,1,1],
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[1,1,0,0,1,1,1,1,1,1,0,0,1,1],
+[1,1,0,0,1,1,1,1,1,1,3,3,1,1],
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,2,0,0,0,0,0,0,0,0,0,0,0,0],
 [1,1,1,1,1,1,1,1,1,1,0,0,0,0],
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -150,12 +214,16 @@ mapa=[
 [0,1,1,0,0,0,0,0,1,1,0,0,0,0],
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
 [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,1,1,1],
+[0,0,0,0,0,0,2,0,0,0,0,1,1,1],
 [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
 ]
 
 player= Player(50, SCREEN_HEIGHT-60)
+slimes= pygame.sprite.Group()
+fogos=pygame.sprite.Group()
 mundo= World(mapa)
+
+restart= Botao(SCREEN_WIDTH//2, SCREEN_HEIGHT//2, restart_image)
 
 #Código Principal
 run= True 
@@ -165,6 +233,10 @@ while run:
     screen.blit(background_image, (0, 0))   
     
     mundo.draw()
+
+    slimes.update()
+    slimes.draw(screen)
+    fogos.draw(screen)
 
     player.update()
 

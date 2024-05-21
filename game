@@ -15,6 +15,7 @@ SCREEN_HEIGHT = 750
 # Constantes do jogo
 tile_size=40 #tamanho dos quadradinhos que "separam" o mapa
 game_over=0
+tela_inicial= True
 
 # Criando a janela
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -24,6 +25,12 @@ pygame.display.set_caption("Astronaut")
 background_image = pygame.image.load("sprites/graphics/fundo.png")
 restart_img= pygame.image.load("sprites/graphics/restart.png")
 restart_image= pygame.transform.scale(restart_img,(90,90))
+start_img=pygame.image.load("sprites/graphics/start.png")
+nome_img=pygame.image.load("sprites/graphics/nome.png")
+start_image=pygame.transform.scale(start_img,(100,90))
+nome_image= pygame.transform.scale(nome_img,(400,200))
+exit_img= pygame.image.load("sprites/graphics/exit.png")
+exit_image= pygame.transform.scale(exit_img,(90,90))
 
 
 def draw_grid():
@@ -258,30 +265,41 @@ caveiras= pygame.sprite.Group()
 fogos=pygame.sprite.Group()
 mundo= World(mapa)
 
-restart= Botao(SCREEN_WIDTH//2 -50, SCREEN_HEIGHT//2, restart_image)
+# botoes
+
+restart= Botao(450, SCREEN_HEIGHT//2, restart_image)
+start= Botao (150, SCREEN_HEIGHT//2, start_image)
+exit= Botao (300, SCREEN_HEIGHT//2, exit_image)
 
 #Código Principal
 run= True 
 while run:
 
     clock.tick(FPS)
-    screen.blit(background_image, (0, 0))   
-    
-    mundo.draw()
+    screen.blit(background_image, (0, 0))  
 
-    if game_over==0:
-        caveiras.update()
+    if tela_inicial== True: 
+        screen.blit(nome_image,(75,90))
+        if exit.draw():
+            run=False
+        if start.draw():
+            tela_inicial=False
+    else:
+        mundo.draw()
 
-    caveiras.draw(screen)
-    fogos.draw(screen)
+        if game_over==0:
+            caveiras.update()
 
-    game_over= player.update(game_over)
+        caveiras.draw(screen)
+        fogos.draw(screen)
 
-    if game_over==1:
-        if restart.draw():
-            player.reset(50, SCREEN_HEIGHT-60)
-            game_over=0
-    draw_grid()
+        game_over= player.update(game_over)
+
+        if game_over==1:
+            if restart.draw():
+                player.reset(50, SCREEN_HEIGHT-60)
+                game_over=0
+        draw_grid()
 
 
     for event in pygame.event.get():

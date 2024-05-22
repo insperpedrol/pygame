@@ -20,6 +20,8 @@ tile_size = 40  # tamanho dos quadradinhos que "separam" o mapa
 game_over = 0
 tela_inicial = True
 score=0
+# armazena resets
+num_resets=0
 
 # Criando a janela
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -40,7 +42,7 @@ msginicial_image = pygame.transform.scale(msginicial_img, (400, 300))
 msgfinal_img = pygame.image.load("sprites/graphics/ganhou.png")
 msgfinal_image = pygame.transform.scale(msgfinal_img, (200, 100))
 gameover_img = pygame.image.load("sprites/graphics/game_over.png")
-gameover_image = pygame.transform.scale(msgfinal_img, (200, 100))
+gameover_image = pygame.transform.scale(gameover_img, (200, 100))
 
 # carregando musicas
 
@@ -54,7 +56,7 @@ def draw_text(text, font, text_col, x, y):
 	img = font.render(text, True, text_col)
 	screen.blit(img, (x, y))
 
-fonte_das_vidas= pygame.font.SysFont('Bauhaus 93', 30)
+fonte = pygame.font.SysFont('Bauhaus 93', 30)
 
 # Cria a class do player
 class Player():
@@ -374,7 +376,7 @@ while run:
     else:
         mundo.draw()
 
-        if game_over == 0:
+        if game_over == 0 and num_resets<3 and score<2: #se o jogo continua e as vidas ainda não acabaram
             caveiras.update()
             plataformas.update()
             # atualize score
@@ -383,12 +385,14 @@ while run:
                 score+=1
                 print(score)
                 som_moeda.play()
-            if score==1:
-                screen.blit(msgfinal_image, (225, 280))
-                score=0
-                key = pygame.key.get_pressed() 
-                if key[pygame.K_SPACE]: #aperta espaco pra sair do jogo
-                    run=False
+
+        if score==2:
+            screen.blit(msgfinal_image, (225, 280))
+            game_over=0 
+            score=0
+            key = pygame.key.get_pressed() 
+            if key[pygame.K_SPACE]: #aperta espaco pra sair do jogo
+                run=False
 
 
         caveiras.draw(screen)
@@ -402,12 +406,24 @@ while run:
             if restart.draw():
                 player.reset(50, SCREEN_HEIGHT - 60)
                 game_over = 0
+                num_resets+=1
             if exit.draw():
                 run = False
+        
+        if num_resets==3:
+            screen.blit(gameover_image, (200 , 450))
+            draw_text('APERTE ESPAÇO', fonte, (250,250,250),200, 400)
+            key = pygame.key.get_pressed() 
+            if key[pygame.K_SPACE]: #aperta espaco pra sair do jogo
+                run=False
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
+
+
+
+
 
     pygame.display.update()
 pygame.quit()

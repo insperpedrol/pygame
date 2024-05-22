@@ -39,7 +39,7 @@ msginicial_img = pygame.image.load("sprites/graphics/msg_inicial.png")
 msginicial_image = pygame.transform.scale(msginicial_img, (400, 300))
 msgfinal_img = pygame.image.load("sprites/graphics/ganhou.png")
 msgfinal_image = pygame.transform.scale(msgfinal_img, (200, 100))
-gameover_img = pygame.image.load("sprites/graphics/gameover.png")
+gameover_img = pygame.image.load("sprites/graphics/game_over.png")
 gameover_image = pygame.transform.scale(msgfinal_img, (200, 100))
 
 # carregando musicas
@@ -363,8 +363,6 @@ while run:
     musicadefundo.play()
     clock.tick(FPS)
     screen.blit(background_image, (0, 0))
-    vidas= 3 #quando acaba é game over
-
 
     if tela_inicial == True:
         screen.blit(nome_image, (110, 90))
@@ -385,14 +383,14 @@ while run:
                 score+=1
                 print(score)
                 som_moeda.play()
-            if score==15: #se pegou todas as moedas ganha
-                
-                screen.blit(msgfinal_image, (225, 280)) 
+            if score==1:
+                screen.blit(msgfinal_image, (225, 280))
+                score=0
                 key = pygame.key.get_pressed() 
                 if key[pygame.K_SPACE]: #aperta espaco pra sair do jogo
                     run=False
 
-        # desenha na tela elementos
+
         caveiras.draw(screen)
         plataformas.draw(screen)
         coracoes.draw(screen)
@@ -401,20 +399,11 @@ while run:
         game_over = player.update(game_over)
 
         if game_over == 1:
-	        draw_text("Vidas:{0}".format(vidas), fonte_das_vidas, white, tile_size - 10, 10)
             if restart.draw():
-                player.reset(50, SCREEN_HEIGHT - 40)
+                player.reset(50, SCREEN_HEIGHT - 60)
                 game_over = 0
             if exit.draw():
                 run = False
-        vidas-=1
-        
-        if vidas==0: #se vidas acabaram
-            screen.blit(gameover_image, (225, 280)) 
-            key = pygame.key.get_pressed() 
-            if key[pygame.K_SPACE]: #aperta espaco pra sair do jogo
-                run=False
-        
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -422,3 +411,4 @@ while run:
 
     pygame.display.update()
 pygame.quit()
+        

@@ -377,7 +377,7 @@ while run:
     else:
         mundo.draw()
 
-        if game_over == 0 and num_resets<3 and score<2: #se o jogo continua e as vidas ainda não acabaram
+        if game_over == 0 and num_resets<3 and score<15: #se o jogo continua e as vidas ainda não acabaram
             caveiras.update()
             plataformas.update()
             # atualize score

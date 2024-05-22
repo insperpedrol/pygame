@@ -1,21 +1,23 @@
 import pygame
-from pygame.locals import *
 
 # Inicializando o Pygame
 pygame.init()
+pygame.mixer.init()
 
-#Relógio do jogo 
-clock= pygame.time.Clock()
-FPS=50
+
+# Relógio do jogo 
+clock = pygame.time.Clock()
+FPS = 50
 
 # Definindo algumas constantes da janela   
 SCREEN_WIDTH = 550
 SCREEN_HEIGHT = 750
 
 # Constantes do jogo
-tile_size=40 #tamanho dos quadradinhos que "separam" o mapa
-game_over=0
-tela_inicial= True
+tile_size = 40  # tamanho dos quadradinhos que "separam" o mapa
+game_over = 0
+tela_inicial = True
+score=0
 
 # Criando a janela
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -23,288 +25,372 @@ pygame.display.set_caption("Astronaut")
 
 # Carregando Imagens
 background_image = pygame.image.load("sprites/graphics/fundo.png")
-restart_img= pygame.image.load("sprites/graphics/restart.png")
-restart_image= pygame.transform.scale(restart_img,(90,90))
-start_img=pygame.image.load("sprites/graphics/start.png")
-nome_img=pygame.image.load("sprites/graphics/nome.png")
-start_image=pygame.transform.scale(start_img,(100,90))
-nome_image= pygame.transform.scale(nome_img,(400,200))
-exit_img= pygame.image.load("sprites/graphics/exit.png")
-exit_image= pygame.transform.scale(exit_img,(90,90))
+restart_img = pygame.image.load("sprites/graphics/restart.png")
+restart_image = pygame.transform.scale(restart_img, (90, 90))
+start_img = pygame.image.load("sprites/graphics/start.png")
+nome_img = pygame.image.load("sprites/graphics/nome.png")
+start_image = pygame.transform.scale(start_img, (110, 90))
+nome_image = pygame.transform.scale(nome_img, (400, 200))
+exit_img = pygame.image.load("sprites/graphics/exit.png")
+exit_image = pygame.transform.scale(exit_img, (90, 90))
+msginicial_img = pygame.image.load("sprites/graphics/msg_inicial.png")
+msginicial_image = pygame.transform.scale(msginicial_img, (400, 300))
+msgfinal_img = pygame.image.load("sprites/graphics/ganhou.png")
+msgfinal_image = pygame.transform.scale(msgfinal_img, (400, 300))
 
+musicadefundo=pygame.mixer.Sound("sprites/graphics/msc.wav")
+musicadefundo.set_volume(0.1)
+som_moeda=pygame.mixer.Sound("sprites/graphics/pickup.wav")
+som_moeda.set_volume(0.5)
 
-def draw_grid():
-	for line in range(0, 20):
-		pygame.draw.line(screen, (255, 255, 255), (0, line * tile_size), (SCREEN_WIDTH, line * tile_size))
-		pygame.draw.line(screen, (255, 255, 255), (line * tile_size, 0), (line * tile_size, SCREEN_HEIGHT))
 
 # Cria a class do player
 class Player():
     def __init__(self, x, y):
-        self.reset(x,y)
-    def update(self,game_over):   
-        # deslocamento e velocidade
-        dx=0
-        dy=0
-        Vcorrida=5
+        self.reset(x, y)
 
-        if game_over==0:
+    def update(self, game_over):
+        # deslocamento e velocidade
+        dx = 0
+        dy = 0
+        Vcorrida = 5
+        espacoplataforma=20
+        
+
+        if game_over == 0:
             # comandos no teclado
-            key= pygame.key.get_pressed()
+            key = pygame.key.get_pressed()
             if key[pygame.K_LEFT]:
-                dx-=5
-                self.contador+=1
-                self.direcao=2
+                dx -= 5
+                self.contador += 1
+                self.direcao = 2
             if key[pygame.K_RIGHT]:
-                dx+=5
-                self.contador+=1
-                self.direcao=1
-            if key[pygame.K_SPACE] and self.jumped==False  and self.no_chao==True:
-                self.Vy=-5
-                self.jumped== True
-            if key[pygame.K_SPACE]==False:
-                self.jumped=False
-            if key[pygame.K_RIGHT]==False and key[pygame.K_LEFT]==False:  
-                self.contador=0
-                self.indice=0
-                if self.direcao==1:
-                    self.image=self.frames_right[self.indice]
-                if self.direcao==2:
-                    self.image=self.frames_left[self.indice]     
-                
+                dx += 5
+                self.contador += 1
+                self.direcao = 1
+            if key[pygame.K_SPACE] and self.jumped == False and self.no_chao == True:
+                self.Vy = -15
+                self.jumped == True
+            if key[pygame.K_SPACE] == False:
+                self.jumped = False
+            if key[pygame.K_RIGHT] == False and key[pygame.K_LEFT] == False:
+                self.contador = 0
+                self.indice = 0
+                if self.direcao == 1:
+                    self.image = self.frames_right[self.indice]
+                if self.direcao == 2:
+                    self.image = self.frames_left[self.indice]
+
             # animação corrida
 
-            if self.contador>Vcorrida:
-                self.contador=0 
-                self.indice+=1
-                if self.indice>=len(self.frames_right):
-                    self.indice=0
-                if self.direcao==1:
-                    self.image=self.frames_right[self.indice]
-                if self.direcao==2:
-                    self.image=self.frames_left[self.indice]
+            if self.contador > Vcorrida:
+                self.contador = 0
+                self.indice += 1
+                if self.indice >= len(self.frames_right):
+                    self.indice = 0
+                if self.direcao == 1:
+                    self.image = self.frames_right[self.indice]
+                if self.direcao == 2:
+                    self.image = self.frames_left[self.indice]
 
             # adiciona gravidade
-            self.Vy+= 1
-            if self.Vy>10:
-                self.Vy=10
+            self.Vy += 1
+            if self.Vy > 10:
+                self.Vy = 10
 
-            dy+=self.Vy
+            dy += self.Vy
             # checa colisão
-            self.no_chao=False
+            self.no_chao = False
             for tile in mundo.tile_list:
-                if tile[1].colliderect(self.rect.x +dx, self.rect.y, self.largura, self.comprimento):
-                    dx=0
-                if tile[1].colliderect(self.rect.x, self.rect.y +dy, self.largura, self.comprimento):
-                # Analisa tds as colisoes antes de acontecer
-                    if self.Vy <0:
-                        dy=tile[1].bottom- self.rect.top
-                        self.Vy=0
-                    elif self.Vy>=0:
-                        dy=tile[1].top- self.rect.bottom
-                        self.Vy=0
-                        self.no_chao=True
-            
+                if tile[1].colliderect(self.rect.x + dx, self.rect.y, self.largura, self.comprimento):
+                    dx = 0
+                if tile[1].colliderect(self.rect.x, self.rect.y + dy, self.largura, self.comprimento):
+                    # Analisa tds as colisoes antes de acontecer
+                    if self.Vy < 0:
+                        dy = tile[1].bottom - self.rect.top
+                        self.Vy = 0
+                    elif self.Vy >= 0:
+                        dy = tile[1].top - self.rect.bottom
+                        self.Vy = 0
+                        self.no_chao = True
+
             # ver colisoes mortais(Inimigo ou fogo)
             if pygame.sprite.spritecollide(self, caveiras, False):
-                game_over=1
+                game_over = 1
             if pygame.sprite.spritecollide(self, fogos, False):
-                game_over=1
-            
+                game_over = 1
 
+            # Colisao com plataforma
+            for plataforma in plataformas:
+                # com x
+                if plataforma.rect.colliderect(self.rect.x + dx, self.rect.y, self.largura, self.comprimento):
+                    dx=0
+                if plataforma.rect.colliderect(self.rect.x, self.rect.y + dy, self.largura, self.comprimento):
+                    # Analisa tds as colisoes antes de acontecer (msm logica de ciima)
+                    if abs((self.rect.top +dy) -plataforma.rect.bottom)<espacoplataforma:
+                        self.Vy=0
+                        dy = plataforma.rect.bottom - self.rect.top
+                    elif abs((self.rect.top -dy) -plataforma.rect.bottom)<espacoplataforma:
+                        self.rect.bottom= plataforma.rect.top-1
+                        dy=0
+                        self.no_chao=True
+                    if plataforma.move_x!=0:
+                        self.rect.x+= plataforma.dx
+
+
+                    
+                        
             # atualiza posição jogador
-            self.rect.x+=dx
-            self.rect.y+=dy
+            self.rect.x += dx
+            self.rect.y += dy
 
-        if self.rect.bottom> SCREEN_HEIGHT:
-            self.rect.bottom= SCREEN_HEIGHT
+        if self.rect.bottom > SCREEN_HEIGHT:
+            self.rect.bottom = SCREEN_HEIGHT
 
-        elif game_over==1:
-            self.image=self.morto
+        elif game_over == 1:
+            self.image = self.morto
         # desenha jogador
         screen.blit(self.image, self.rect)
         return game_over
-    
-    def reset (self,x, y):
-        self.frames_right=[]
-        self.frames_left=[]
-        self.indice=0
-        self.contador=0
-        #carrega os frames de animação e ajusta pra direita e esquerda
-        lista_img= [pygame.image.load("sprites/graphics/player1.png"),pygame.image.load("sprites/graphics/playerrun1.png"),pygame.image.load("sprites/graphics/playerrun2.png"),pygame.image.load("sprites/graphics/playerrun3.png")]
+
+    def reset(self, x, y):
+        self.frames_right = []
+        self.frames_left = []
+        self.indice = 0
+        self.contador = 0
+        # carrega os frames de animação e ajusta pra direita e esquerda
+        lista_img = [pygame.image.load("sprites/graphics/player1.png"), pygame.image.load("sprites/graphics/playerrun1.png"),
+                     pygame.image.load("sprites/graphics/playerrun2.png"), pygame.image.load("sprites/graphics/playerrun3.png")]
         for frame in lista_img:
-            img_right= pygame.transform.scale(frame,(30,30))
-            img_left= pygame.transform.flip(img_right,True, False)
+            img_right = pygame.transform.scale(frame, (30, 30))
+            img_left = pygame.transform.flip(img_right, True, False)
             self.frames_right.append(img_right)
             self.frames_left.append(img_left)
-        img_morto=pygame.image.load("sprites/graphics/playermorto.png")
-        self.morto= pygame.transform.scale(img_morto,(30,30))
-        self.image= self.frames_right[self.indice]
-        self.rect= self.image.get_rect()
-        self.largura=self.image.get_width()
-        self.comprimento=self.image.get_height()
-        self.rect.x=x
-        self.rect.y=y 
-        self.Vy= 0
-        self.jumped= False  
-        self.direcao=0
-        self.no_chao=True
+        img_morto = pygame.image.load("sprites/graphics/playermorto.png")
+        self.morto = pygame.transform.scale(img_morto, (30, 30))
+        self.image = self.frames_right[self.indice]
+        self.rect = self.image.get_rect()
+        self.largura = self.image.get_width()
+        self.comprimento = self.image.get_height()
+        self.rect.x = x
+        self.rect.y = y
+        self.Vy = 0
+        self.jumped = False
+        self.direcao = 0
+        self.no_chao = True
+
 
 # Cria a class do mundo
-
 class World():
     def __init__(self, data):
-        self.tile_list=[]
+        self.tile_list = []
         # carregando imagens
         platform_image = pygame.image.load("sprites/graphics/piso1.png")
-        linhas=0
+        linhas = 0
         for linha in data:
-            colunas=0
+            colunas = 0
             for quadradinnho in linha:
-                if quadradinnho==1:
-                        img= pygame.transform.scale(platform_image,(tile_size,tile_size))
-                        img_rect= img.get_rect()
-                        img_rect.x= colunas*tile_size
-                        img_rect.y= linhas*tile_size
-                        tile= (img, img_rect)
-                        self.tile_list.append(tile)
-                if quadradinnho==2:
-                    caveira=Inimigo(colunas* tile_size,linhas*tile_size)
+                if quadradinnho == 1:
+                    img = pygame.transform.scale(platform_image, (tile_size, tile_size))
+                    img_rect = img.get_rect()
+                    img_rect.x = colunas * tile_size
+                    img_rect.y = linhas * tile_size
+                    tile = (img, img_rect)
+                    self.tile_list.append(tile)
+                if quadradinnho == 2:
+                    caveira = Inimigo(colunas * tile_size, linhas * tile_size)
                     caveiras.add(caveira)
-                if quadradinnho==3:
-                    fogo= Fogo(colunas* tile_size,linhas*tile_size)
+                if quadradinnho == 3:
+                    fogo = Fogo(colunas * tile_size, linhas * tile_size)
                     fogos.add(fogo)
+                if quadradinnho==4:
+                    coracao = Coracao(colunas * tile_size, linhas * tile_size)
+                    coracoes.add(coracao)
+                if quadradinnho==5:#plataforma horizontal
+                    plataforma=Plataforma(colunas * tile_size, linhas * tile_size, 1, 0)
+                    plataformas.add(plataforma)
+                if quadradinnho==6:#plataforma vertical
+                    plataforma=Plataforma(colunas * tile_size, linhas * tile_size,0,1)
+                    plataformas.add(plataforma)
 
 
-                colunas+=1
-            linhas+=1
-    
+                colunas += 1
+            linhas += 1
+
     # desenha o cenário
     def draw(self):
         for tile in self.tile_list:
-            screen.blit(tile[0],tile[1])
+            screen.blit(tile[0], tile[1])
 
-class Botao ():
+
+class Botao():
     def __init__(self, x, y, image):
-        self.image= image
-        self.rect= self.image.get_rect()
-        self.rect.x=x
-        self.rect.y=y
-        self.clicked= False
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.clicked = False
 
     def draw(self):
-        
-        continua= False
+        continua = False
         # pega posição do botao
-        posicao_botao= pygame.mouse.get_pos()
+        posicao_botao = pygame.mouse.get_pos()
         if self.rect.collidepoint(posicao_botao):
-            if pygame.mouse.get_pressed()[0]==1 and self.clicked== False:
-                self.clicked=True
-                continua= True
-        if pygame.mouse.get_pressed()[0]==0:
-            self.clicked= False
+            if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False:
+                self.clicked = True
+                continua = True
+        if pygame.mouse.get_pressed()[0] == 0:
+            self.clicked = False
 
         screen.blit(self.image, self.rect)
         return continua
 
 
-
 class Inimigo(pygame.sprite.Sprite):
-    def __init__(self, x ,y):
+    def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.image=pygame.image.load("sprites/graphics/caveira.png")
-        self.image=pygame.transform.scale(self.image,(25,25))
-        self.rect= self.image.get_rect()
-        self.rect.x=x
-        self.rect.y=y
-        self.direcao= 1
-        self.dx=0
+        self.image = pygame.image.load("sprites/graphics/caveira.png")
+        self.image = pygame.transform.scale(self.image, (25, 25))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.direcao = 1
+        self.dx = 0
+
     def update(self):
-        self.rect.x+=self.direcao
-        self.dx+=1
-        if abs(self.dx)>50:
-            self.direcao*= (-1)
-            self.dx*=(-1)
+        self.rect.x += self.direcao
+        self.dx += 1
+        if abs(self.dx) > 50:
+            self.direcao *= (-1)
+            self.dx *= (-1)
+
+class Plataforma(pygame.sprite.Sprite):
+    def __init__(self, x, y, move_x, move_y):
+        pygame.sprite.Sprite.__init__(self)
+        image = pygame.image.load("sprites/graphics/piso2.png")
+        self.image = pygame.transform.scale(image, (60, 30))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.direcao = 1
+        self.dx = 0
+        self.move_x= move_x
+        self.move_y= move_y
+
+
+    def update(self):
+        self.rect.x += self.direcao  * self.move_x #=0
+        self.rect.y += self.direcao  * self.move_y #=1
+        self.dx += 1
+        if abs(self.dx) > 50:
+            self.direcao *= (-1)
+            self.dx *= (-1)
+
+
 
 class Fogo(pygame.sprite.Sprite):
-    def __init__(self, x ,y):
+    def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        image=pygame.image.load("sprites/graphics/fogo.png")
-        self.image=pygame.transform.scale(image,(40,50))
-        self.rect= self.image.get_rect()
-        self.rect.x=x
-        self.rect.y=y-10
+        image = pygame.image.load("sprites/graphics/fogo.png")
+        self.image = pygame.transform.scale(image, (40, 50))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y - 10
 
-    
-                        
+class Coracao(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        pygame.sprite.Sprite.__init__(self)
+        image = pygame.image.load("sprites/graphics/coracao.png")
+        self.image = pygame.transform.scale(image, (20, 20))
+        self.rect = self.image.get_rect()
+        self.rect.center = (x,y)
+
 # lista criacao mapa
-mapa=[
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[1,1,1,1,1,0,0,0,0,1,1,1,1,1],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[1,1,0,0,1,1,1,1,1,1,3,3,1,1],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,2,0,0,0,0,0,0,0,0,0,0,0],
-[1,1,1,1,1,1,1,1,1,1,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[1,1,1,0,0,1,1,1,1,1,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,1,1,0,0,0,0,0,1,1,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,2,0,0,0,0,1,1,1],
-[1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+mapa = [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 4, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 4, 0],
+    [1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 4, 0, 0, 0, 0, 4, 0, 4, 0, 0, 0, 0, 4],
+    [1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 2, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 4, 0, 0, 0, 0, 4, 0, 0, 4, 0, 6, 0, 0],
+    [1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 1, 1, 0, 0, 5, 0, 0, 1, 1, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+    [0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 1, 1],
+    [0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ]
 
-player= Player(50, SCREEN_HEIGHT-60)
-caveiras= pygame.sprite.Group()
-fogos=pygame.sprite.Group()
-mundo= World(mapa)
+player = Player(50, SCREEN_HEIGHT - 60)
+caveiras = pygame.sprite.Group()
+plataformas=pygame.sprite.Group()
+coracoes= pygame.sprite.Group()
+fogos = pygame.sprite.Group()
+mundo = World(mapa)
 
 # botoes
+restart = Botao(150,280, restart_image)  # Altere a posição do botão restart se necessário
+start = Botao(150, 280, start_image)
+exit = Botao(300, 280, exit_image)  # Posição ajustada
 
-restart= Botao(450, SCREEN_HEIGHT//2, restart_image)
-start= Botao (150, SCREEN_HEIGHT//2, start_image)
-exit= Botao (300, SCREEN_HEIGHT//2, exit_image)
-
-#Código Principal
-run= True 
+# Código Principal
+run = True
 while run:
 
+    musicadefundo.play()
     clock.tick(FPS)
-    screen.blit(background_image, (0, 0))  
+    screen.blit(background_image, (0, 0))
 
-    if tela_inicial== True: 
-        screen.blit(nome_image,(75,90))
+    if tela_inicial == True:
+        screen.blit(nome_image, (75, 90))
+        screen.blit(msginicial_image, (75, 380))
         if exit.draw():
-            run=False
+            run = False
         if start.draw():
-            tela_inicial=False
+            tela_inicial = False
     else:
         mundo.draw()
 
-        if game_over==0:
+        if game_over == 0:
             caveiras.update()
+            plataformas.update()
+            # atualize score
+            # ve situacao das moedas
+            if pygame.sprite.spritecollide(player, coracoes, True):
+                score+=1
+                som_moeda.play()
+
 
         caveiras.draw(screen)
+        plataformas.draw(screen)
+        coracoes.draw(screen)
         fogos.draw(screen)
 
-        game_over= player.update(game_over)
+        game_over = player.update(game_over)
 
-        if game_over==1:
+        if game_over == 1:
             if restart.draw():
-                player.reset(50, SCREEN_HEIGHT-60)
-                game_over=0
-        draw_grid()
-
+                player.reset(35, SCREEN_HEIGHT - 60)
+                game_over = 0
+                score=0
+            if exit.draw():
+                run = False
+            if score==13:
+                screen.blit(msgfinal_image, (225, 280))
+                tela_inicial=True
+                score=0
 
     for event in pygame.event.get():
-        if event.type ==pygame.QUIT:
-            run=False
+        if event.type == pygame.QUIT:
+            run = False
 
     pygame.display.update()
 pygame.quit()
+# quatro tipos cupanni

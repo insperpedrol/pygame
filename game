@@ -1,4 +1,6 @@
 import pygame
+from pygame.locals import *
+from pygame import mixer
 
 # Inicializando o Pygame
 pygame.init()
@@ -10,7 +12,7 @@ clock = pygame.time.Clock()
 FPS = 50
 
 # Definindo algumas constantes da janela   
-SCREEN_WIDTH = 550
+SCREEN_WIDTH = 640
 SCREEN_HEIGHT = 750
 
 # Constantes do jogo
@@ -24,7 +26,7 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Astronaut")
 
 # Carregando Imagens
-background_image = pygame.image.load("sprites/graphics/fundo.png")
+background_image = pygame.image.load("sprites/graphics/fundo2.png")
 restart_img = pygame.image.load("sprites/graphics/restart.png")
 restart_image = pygame.transform.scale(restart_img, (90, 90))
 start_img = pygame.image.load("sprites/graphics/start.png")
@@ -36,13 +38,23 @@ exit_image = pygame.transform.scale(exit_img, (90, 90))
 msginicial_img = pygame.image.load("sprites/graphics/msg_inicial.png")
 msginicial_image = pygame.transform.scale(msginicial_img, (400, 300))
 msgfinal_img = pygame.image.load("sprites/graphics/ganhou.png")
-msgfinal_image = pygame.transform.scale(msgfinal_img, (400, 300))
+msgfinal_image = pygame.transform.scale(msgfinal_img, (200, 100))
+gameover_img = pygame.image.load("sprites/graphics/gameover.png")
+gameover_image = pygame.transform.scale(msgfinal_img, (200, 100))
+
+# carregando musicas
 
 musicadefundo=pygame.mixer.Sound("sprites/graphics/msc.wav")
 musicadefundo.set_volume(0.1)
 som_moeda=pygame.mixer.Sound("sprites/graphics/pickup.wav")
 som_moeda.set_volume(0.5)
 
+# funcao de texto
+def draw_text(text, font, text_col, x, y):
+	img = font.render(text, True, text_col)
+	screen.blit(img, (x, y))
+
+fonte_das_vidas= pygame.font.SysFont('Bauhaus 93', 30)
 
 # Cria a class do player
 class Player():
@@ -68,7 +80,7 @@ class Player():
                 dx += 5
                 self.contador += 1
                 self.direcao = 1
-            if key[pygame.K_SPACE] and self.jumped == False and self.no_chao == True:
+            if key[pygame.K_SPACE] and self.jumped == False and self.no_ar == False:
                 self.Vy = -15
                 self.jumped == True
             if key[pygame.K_SPACE] == False:
@@ -100,10 +112,12 @@ class Player():
 
             dy += self.Vy
             # checa colisão
-            self.no_chao = False
+            self.no_ar = True
             for tile in mundo.tile_list:
+                # checa em x
                 if tile[1].colliderect(self.rect.x + dx, self.rect.y, self.largura, self.comprimento):
                     dx = 0
+                # checa em y
                 if tile[1].colliderect(self.rect.x, self.rect.y + dy, self.largura, self.comprimento):
                     # Analisa tds as colisoes antes de acontecer
                     if self.Vy < 0:
@@ -112,7 +126,7 @@ class Player():
                     elif self.Vy >= 0:
                         dy = tile[1].top - self.rect.bottom
                         self.Vy = 0
-                        self.no_chao = True
+                        self.no_ar = False
 
             # ver colisoes mortais(Inimigo ou fogo)
             if pygame.sprite.spritecollide(self, caveiras, False):
@@ -120,7 +134,7 @@ class Player():
             if pygame.sprite.spritecollide(self, fogos, False):
                 game_over = 1
 
-            # Colisao com plataforma
+            # Colisao com plataforma movel
             for plataforma in plataformas:
                 # com x
                 if plataforma.rect.colliderect(self.rect.x + dx, self.rect.y, self.largura, self.comprimento):
@@ -130,12 +144,12 @@ class Player():
                     if abs((self.rect.top +dy) -plataforma.rect.bottom)<espacoplataforma:
                         self.Vy=0
                         dy = plataforma.rect.bottom - self.rect.top
-                    elif abs((self.rect.top -dy) -plataforma.rect.bottom)<espacoplataforma:
+                    elif abs((self.rect.bottom+dy) -plataforma.rect.bottom)<espacoplataforma:
                         self.rect.bottom= plataforma.rect.top-1
                         dy=0
-                        self.no_chao=True
+                        self.no_ar=False
                     if plataforma.move_x!=0:
-                        self.rect.x+= plataforma.dx
+                        self.rect.x+= plataforma.direcao
 
 
                     
@@ -177,7 +191,7 @@ class Player():
         self.Vy = 0
         self.jumped = False
         self.direcao = 0
-        self.no_chao = True
+        self.no_ar = False
 
 
 # Cria a class do mundo
@@ -268,7 +282,7 @@ class Plataforma(pygame.sprite.Sprite):
     def __init__(self, x, y, move_x, move_y):
         pygame.sprite.Sprite.__init__(self)
         image = pygame.image.load("sprites/graphics/piso2.png")
-        self.image = pygame.transform.scale(image, (60, 30))
+        self.image = pygame.transform.scale(image, (60, 20))
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
@@ -292,10 +306,10 @@ class Fogo(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
         image = pygame.image.load("sprites/graphics/fogo.png")
-        self.image = pygame.transform.scale(image, (40, 50))
+        self.image = pygame.transform.scale(image, (40, 30))
         self.rect = self.image.get_rect()
         self.rect.x = x
-        self.rect.y = y - 10
+        self.rect.y = y + 10
 
 class Coracao(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -303,31 +317,33 @@ class Coracao(pygame.sprite.Sprite):
         image = pygame.image.load("sprites/graphics/coracao.png")
         self.image = pygame.transform.scale(image, (20, 20))
         self.rect = self.image.get_rect()
-        self.rect.center = (x,y)
+        self.rect.x = x
+        self.rect.y = y 
 
 # lista criacao mapa
 mapa = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 4, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 4, 0],
-    [1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 4, 0, 0, 0, 0, 4, 0, 4, 0, 0, 0, 0, 4],
-    [1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 1, 1],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 2, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 4, 0, 0, 0, 0, 4, 0, 0, 4, 0, 6, 0, 0],
-    [1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 1, 1, 0, 0, 5, 0, 0, 1, 1, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
-    [0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 1, 1],
-    [0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 0,1],
+    [1,0, 4, 0, 4, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1,1],
+    [1,1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0,1],
+    [1,0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,1],
+    [1,0, 4, 0, 0, 0, 0, 4, 0, 4, 0, 0, 0, 0, 4,1],
+    [1,1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 3, 3, 1,1],
+    [1,0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,1],
+    [1,0, 0, 2, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0,1],
+    [1,1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0,1],
+    [1,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,1],
+    [1,0, 4, 0, 0, 0, 0, 4, 0, 0, 4, 0, 6, 0, 0,1],
+    [1,1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0,1],
+    [1,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,1],
+    [1,0, 0, 4, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0,1],
+    [1,0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,1],
+    [1,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,1],
+    [1,0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 1, 1,1],
+    [1,0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 1, 1,1],
+    [1,1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,1],
 ]
 
+# grupos
 player = Player(50, SCREEN_HEIGHT - 60)
 caveiras = pygame.sprite.Group()
 plataformas=pygame.sprite.Group()
@@ -336,9 +352,9 @@ fogos = pygame.sprite.Group()
 mundo = World(mapa)
 
 # botoes
-restart = Botao(150,280, restart_image)  # Altere a posição do botão restart se necessário
-start = Botao(150, 280, start_image)
-exit = Botao(300, 280, exit_image)  # Posição ajustada
+restart = Botao(200,280, restart_image)  # Altere a posição do botão restart se necessário
+start = Botao(180, 280, start_image)
+exit = Botao(340, 280, exit_image)  # Posição ajustada
 
 # Código Principal
 run = True
@@ -347,10 +363,12 @@ while run:
     musicadefundo.play()
     clock.tick(FPS)
     screen.blit(background_image, (0, 0))
+    vidas= 3 #quando acaba é game over
+
 
     if tela_inicial == True:
-        screen.blit(nome_image, (75, 90))
-        screen.blit(msginicial_image, (75, 380))
+        screen.blit(nome_image, (110, 90))
+        screen.blit(msginicial_image, (120, 380))
         if exit.draw():
             run = False
         if start.draw():
@@ -365,9 +383,16 @@ while run:
             # ve situacao das moedas
             if pygame.sprite.spritecollide(player, coracoes, True):
                 score+=1
+                print(score)
                 som_moeda.play()
+            if score==15: #se pegou todas as moedas ganha
+                
+                screen.blit(msgfinal_image, (225, 280)) 
+                key = pygame.key.get_pressed() 
+                if key[pygame.K_SPACE]: #aperta espaco pra sair do jogo
+                    run=False
 
-
+        # desenha na tela elementos
         caveiras.draw(screen)
         plataformas.draw(screen)
         coracoes.draw(screen)
@@ -376,16 +401,20 @@ while run:
         game_over = player.update(game_over)
 
         if game_over == 1:
+	        draw_text("Vidas:{0}".format(vidas), fonte_das_vidas, white, tile_size - 10, 10)
             if restart.draw():
-                player.reset(35, SCREEN_HEIGHT - 60)
+                player.reset(50, SCREEN_HEIGHT - 40)
                 game_over = 0
-                score=0
             if exit.draw():
                 run = False
-            if score==13:
-                screen.blit(msgfinal_image, (225, 280))
-                tela_inicial=True
-                score=0
+        vidas-=1
+        
+        if vidas==0: #se vidas acabaram
+            screen.blit(gameover_image, (225, 280)) 
+            key = pygame.key.get_pressed() 
+            if key[pygame.K_SPACE]: #aperta espaco pra sair do jogo
+                run=False
+        
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -393,4 +422,3 @@ while run:
 
     pygame.display.update()
 pygame.quit()
-# quatro tipos cupanni

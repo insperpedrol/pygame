@@ -1,7 +1,10 @@
 # pygame
+Maria Eduarda Santos, Pedro Lino e Joao Pedro Benevides
 
 
 Astronaut- Platformer Pygame
+
+link demo: https://youtube.com/shorts/zyGr-KrhMRk?feature=share
 
 Bem vindo ao documento de instrucoes do projeto pygame
 

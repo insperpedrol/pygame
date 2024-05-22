@@ -41,22 +41,26 @@ msginicial_img = pygame.image.load("sprites/graphics/msg_inicialc.png")
 msginicial_image = pygame.transform.scale(msginicial_img, (400, 300))
 msgfinal_img = pygame.image.load("sprites/graphics/ganhou.png")
 msgfinal_image = pygame.transform.scale(msgfinal_img, (200, 100))
-gameover_img = pygame.image.load("sprites/graphics/game_over.png")
-gameover_image = pygame.transform.scale(gameover_img, (200, 100))
 
 # carregando musicas
 
 musicadefundo=pygame.mixer.Sound("sprites/graphics/msc.wav")
-musicadefundo.set_volume(0.1)
+musicadefundo.set_volume(0.5)
 som_moeda=pygame.mixer.Sound("sprites/graphics/pickup.wav")
 som_moeda.set_volume(0.5)
 
-# funcao de texto
+# Toca os sons em diferentes canais
+channel1 = pygame.mixer.Channel(0)  # Usa o canal 0
+channel2 = pygame.mixer.Channel(1)  # Usa o canal 1
+
+
+# funcao de criar texto
 def draw_text(text, font, text_col, x, y):
 	img = font.render(text, True, text_col)
 	screen.blit(img, (x, y))
 
 fonte = pygame.font.SysFont('Bauhaus 93', 30)
+fonte_menor= pygame.font.SysFont('Bauhaus 93', 22)
 
 # Cria a class do player
 class Player():
@@ -68,29 +72,29 @@ class Player():
         dx = 0
         dy = 0
         Vcorrida = 5
-        espacoplataforma=20
+        espacoplataforma=20 #variavel relacionada a colisao da plataforma movel
         
 
-        if game_over == 0:
+        if game_over == 0: #se game over não é True
             # comandos no teclado
             key = pygame.key.get_pressed()
-            if key[pygame.K_LEFT]:
+            if key[pygame.K_LEFT]: #comando pra esquerda
                 dx -= 5
                 self.contador += 1
                 self.direcao = 2
-            if key[pygame.K_RIGHT]:
+            if key[pygame.K_RIGHT]: #comando pra direita
                 dx += 5
                 self.contador += 1
                 self.direcao = 1
-            if key[pygame.K_SPACE] and self.jumped == False and self.no_ar == False:
+            if key[pygame.K_SPACE] and self.jumped == False and self.no_ar == False: #se ele nao estiver pulando ou no ar pode pular
                 self.Vy = -15
                 self.jumped == True
-            if key[pygame.K_SPACE] == False:
+            if key[pygame.K_SPACE] == False: #coamndo pra ele parar de flutuar
                 self.jumped = False
             if key[pygame.K_RIGHT] == False and key[pygame.K_LEFT] == False:
                 self.contador = 0
                 self.indice = 0
-                if self.direcao == 1:
+                if self.direcao == 1: #define os frames para cada direcao
                     self.image = self.frames_right[self.indice]
                 if self.direcao == 2:
                     self.image = self.frames_left[self.indice]
@@ -109,16 +113,16 @@ class Player():
 
             # adiciona gravidade
             self.Vy += 1
-            if self.Vy > 10:
+            if self.Vy > 10: #nao pode ultrapassar o limite
                 self.Vy = 10
 
             dy += self.Vy
             # checa colisão
             self.no_ar = True
-            for tile in mundo.tile_list:
+            for tile in mundo.tile_list: #checa cada quadradinho
                 # checa em x
                 if tile[1].colliderect(self.rect.x + dx, self.rect.y, self.largura, self.comprimento):
-                    dx = 0
+                    dx = 0 
                 # checa em y
                 if tile[1].colliderect(self.rect.x, self.rect.y + dy, self.largura, self.comprimento):
                     # Analisa tds as colisoes antes de acontecer
@@ -143,13 +147,13 @@ class Player():
                     dx=0
                 if plataforma.rect.colliderect(self.rect.x, self.rect.y + dy, self.largura, self.comprimento):
                     # Analisa tds as colisoes antes de acontecer (msm logica de ciima)
-                    if abs((self.rect.top +dy) -plataforma.rect.bottom)<espacoplataforma:
+                    if abs((self.rect.top +dy) -plataforma.rect.bottom)<espacoplataforma: #embaixo
                         self.Vy=0
                         dy = plataforma.rect.bottom - self.rect.top
-                    elif abs((self.rect.bottom+dy) -plataforma.rect.bottom)<espacoplataforma:
+                    elif abs((self.rect.bottom+dy) -plataforma.rect.bottom)<espacoplataforma: #em cima
                         self.rect.bottom= plataforma.rect.top-1
                         dy=0
-                        self.no_ar=False
+                        self.no_ar=False 
                     if plataforma.move_x!=0:
                         self.rect.x+= plataforma.direcao
 
@@ -163,12 +167,13 @@ class Player():
         if self.rect.bottom > SCREEN_HEIGHT:
             self.rect.bottom = SCREEN_HEIGHT
 
+        #imprime player morto e preenche variavel game over
         elif game_over == 1:
             self.image = self.morto
         # desenha jogador
         screen.blit(self.image, self.rect)
         return game_over
-
+    #funcao de reset utilizada na class Player
     def reset(self, x, y):
         self.frames_right = []
         self.frames_left = []
@@ -203,6 +208,7 @@ class World():
         # carregando imagens
         platform_image = pygame.image.load("sprites/graphics/piso1.png")
         linhas = 0
+        #percorre lista checando elementos
         for linha in data:
             colunas = 0
             for quadradinnho in linha:
@@ -247,6 +253,7 @@ class Botao():
         self.rect.y = y
         self.clicked = False
 
+    #
     def draw(self):
         continua = False
         # pega posição do botao
@@ -261,7 +268,7 @@ class Botao():
         screen.blit(self.image, self.rect)
         return continua
 
-
+# define classe das caveiras
 class Inimigo(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -279,6 +286,8 @@ class Inimigo(pygame.sprite.Sprite):
         if abs(self.dx) > 50:
             self.direcao *= (-1)
             self.dx *= (-1)
+
+# Classe plataformas moveis
 
 class Plataforma(pygame.sprite.Sprite):
     def __init__(self, x, y, move_x, move_y):
@@ -302,7 +311,7 @@ class Plataforma(pygame.sprite.Sprite):
             self.direcao *= (-1)
             self.dx *= (-1)
 
-
+# classe fogo
 
 class Fogo(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -312,6 +321,8 @@ class Fogo(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y + 10
+
+# classe coracoes (moedas)
 
 class Coracao(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -345,7 +356,7 @@ mapa = [
     [1,1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,1],
 ]
 
-# grupos
+# cria grupos
 player = Player(50, SCREEN_HEIGHT - 60)
 caveiras = pygame.sprite.Group()
 plataformas=pygame.sprite.Group()
@@ -353,19 +364,23 @@ coracoes= pygame.sprite.Group()
 fogos = pygame.sprite.Group()
 mundo = World(mapa)
 
-# botoes
-restart = Botao(200,280, restart_image)  # Altere a posição do botão restart se necessário
+# cria botoes  e define posicoes 
+restart = Botao(200,280, restart_image)  
 start = Botao(180, 280, start_image)
-exit = Botao(340, 280, exit_image)  # Posição ajustada
+exit = Botao(340, 280, exit_image)  
+winner= Botao(225, 280,msgfinal_image)
+
+channel1.play(musicadefundo, loops=-1) # loops=-1 para repetir indefinidamente a musica de fundo
 
 # Código Principal
 run = True
 while run:
-
-    musicadefundo.play()
+    
+    #relogio, tela de fundo
     clock.tick(FPS)
     screen.blit(background_image, (0, 0))
 
+    # define tela inicial
     if tela_inicial == True:
         screen.blit(nome_image, (110, 90))
         screen.blit(msginicial_image, (120, 380))
@@ -385,48 +400,46 @@ while run:
             if pygame.sprite.spritecollide(player, coracoes, True):
                 score+=1
                 print(score)
-                som_moeda.play()
+                channel2.play(som_moeda)
 
-
+        #desenha na tela elementos
         caveiras.draw(screen)
         plataformas.draw(screen)
         coracoes.draw(screen)
         fogos.draw(screen)
 
-        game_over = player.update(game_over)
+        game_over = player.update(game_over) #atualiza game over
 
-        if game_over == 1:
+        if game_over == 1: #game over é real
+            draw_text(f'{2-num_resets}/3 tentativas restantes', fonte, (250,250,250),150, 250)
+
             if restart.draw():
+                #com o restart algumas variaveis sao zeradas
                 player.reset(50, SCREEN_HEIGHT - 60)
                 game_over = 0
                 num_resets+=1
             if exit.draw():
                 run = False
         
-        if num_resets==3:
-            screen.blit(gameover_image, (200 , 450))
-            draw_text('APERTE ESPAÇO', fonte, (250,250,250),200, 400)
+        if num_resets==3: #numero max de resets
+            draw_text('GAME OVER-', fonte, (250,250,250),220, 250)
+            draw_text(' Aperte em qualquer uma das teclas de controle para sair', fonte_menor, (250,250,250),35 , 400)
             key = pygame.key.get_pressed() 
-            if key[pygame.K_SPACE]: #aperta espaco pra sair do jogo
-                run=False
+            if key[pygame.K_SPACE] or key[pygame.K_LEFT] or key[pygame.K_RIGHT]: #aperta qualquer botao pra sair do jogo
+                run=False #fecha o programa
 
         
-        if score==15:
-            screen.blit(msgfinal_image, (225, 280))
-            game_over=0 
-            score=0
-            # key = pygame.key.get_pressed() 
-            # if key[pygame.K_SPACE]: #aperta espaco pra sair do jogo
-            #     run=False
-            run=False
+        if score==15: #pegou todas moedas e pode vencer
+            key = pygame.key.get_pressed() 
+            if winner.draw():
+                run=False
+            #fecha o programa
+
+
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
-
-
-
-
 
     pygame.display.update()
 pygame.quit()

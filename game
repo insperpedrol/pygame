@@ -37,7 +37,7 @@ start_image = pygame.transform.scale(start_img, (110, 90))
 nome_image = pygame.transform.scale(nome_img, (400, 200))
 exit_img = pygame.image.load("sprites/graphics/exit.png")
 exit_image = pygame.transform.scale(exit_img, (90, 90))
-msginicial_img = pygame.image.load("sprites/graphics/msg_inicial.png")
+msginicial_img = pygame.image.load("sprites/graphics/msg_inicialc.png")
 msginicial_image = pygame.transform.scale(msginicial_img, (400, 300))
 msgfinal_img = pygame.image.load("sprites/graphics/ganhou.png")
 msgfinal_image = pygame.transform.scale(msgfinal_img, (200, 100))
@@ -369,6 +369,7 @@ while run:
     if tela_inicial == True:
         screen.blit(nome_image, (110, 90))
         screen.blit(msginicial_image, (120, 380))
+
         if exit.draw():
             run = False
         if start.draw():
@@ -385,14 +386,6 @@ while run:
                 score+=1
                 print(score)
                 som_moeda.play()
-
-        if score==2:
-            screen.blit(msgfinal_image, (225, 280))
-            game_over=0 
-            score=0
-            key = pygame.key.get_pressed() 
-            if key[pygame.K_SPACE]: #aperta espaco pra sair do jogo
-                run=False
 
 
         caveiras.draw(screen)
@@ -416,6 +409,16 @@ while run:
             key = pygame.key.get_pressed() 
             if key[pygame.K_SPACE]: #aperta espaco pra sair do jogo
                 run=False
+
+        
+        if score==15:
+            screen.blit(msgfinal_image, (225, 280))
+            game_over=0 
+            score=0
+            # key = pygame.key.get_pressed() 
+            # if key[pygame.K_SPACE]: #aperta espaco pra sair do jogo
+            #     run=False
+            run=False
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:

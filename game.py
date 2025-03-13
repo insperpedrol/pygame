@@ -63,116 +63,118 @@ fonte = pygame.font.SysFont('Bauhaus 93', 30)
 fonte_menor= pygame.font.SysFont('Bauhaus 93', 22)
 
 # Cria a class do player
+
 class Player():
     def __init__(self, x, y):
         self.reset(x, y)
 
+    def atualizar_animacao(self, key):
+        """Atualiza a animação do jogador com base no movimento"""
+        Vcorrida = 5  # Controla a velocidade da animação
+
+        # Se o jogador estiver parado, reseta a animação
+        if key[pygame.K_RIGHT] == False and key[pygame.K_LEFT] == False:
+            self.contador = 0
+            self.indice = 0
+            if self.direcao == 1:
+                self.image = self.frames_right[self.indice]
+            if self.direcao == 2:
+                self.image = self.frames_left[self.indice]
+
+        # Animação da corrida
+        if self.contador > Vcorrida:
+            self.contador = 0
+            self.indice += 1
+            if self.indice >= len(self.frames_right):
+                self.indice = 0
+            if self.direcao == 1:
+                self.image = self.frames_right[self.indice]
+            if self.direcao == 2:
+                self.image = self.frames_left[self.indice]
+
+    def checar_colisoes(self, dx, dy):
+        """Verifica colisões com o mundo, inimigos e plataformas"""
+        espacoplataforma = 20
+
+        self.no_ar = True
+        for tile in mundo.tile_list:
+            if tile[1].colliderect(self.rect.x + dx, self.rect.y, self.largura, self.comprimento):
+                dx = 0
+            if tile[1].colliderect(self.rect.x, self.rect.y + dy, self.largura, self.comprimento):
+                if self.Vy < 0:
+                    dy = tile[1].bottom - self.rect.top
+                    self.Vy = 0
+                elif self.Vy >= 0:
+                    dy = tile[1].top - self.rect.bottom
+                    self.Vy = 0
+                    self.no_ar = False
+
+        if pygame.sprite.spritecollide(self, caveiras, False) or pygame.sprite.spritecollide(self, fogos, False):
+            return dx, dy, 1
+
+        for plataforma in plataformas:
+            if plataforma.rect.colliderect(self.rect.x + dx, self.rect.y, self.largura, self.comprimento):
+                dx = 0
+            if plataforma.rect.colliderect(self.rect.x, self.rect.y + dy, self.largura, self.comprimento):
+                if abs((self.rect.top + dy) - plataforma.rect.bottom) < espacoplataforma:
+                    self.Vy = 0
+                    dy = plataforma.rect.bottom - self.rect.top
+                elif abs((self.rect.bottom + dy) - plataforma.rect.top) < espacoplataforma:
+                    self.rect.bottom = plataforma.rect.top - 1
+                    dy = 0
+                    self.no_ar = False
+                if plataforma.move_x != 0:
+                    self.rect.x += plataforma.direcao
+
+        return dx, dy, 0
+
     def update(self, game_over):
-        # deslocamento e velocidade
         dx = 0
         dy = 0
-        Vcorrida = 5
-        espacoplataforma=20 #variavel relacionada a colisao da plataforma movel
-        
 
-        if game_over == 0: #se game over não é True
-            # comandos no teclado
+        if game_over == 0:
             key = pygame.key.get_pressed()
-            if key[pygame.K_LEFT]: #comando pra esquerda
+
+            if key[pygame.K_LEFT]:
                 dx -= 5
                 self.contador += 1
                 self.direcao = 2
-            if key[pygame.K_RIGHT]: #comando pra direita
+            if key[pygame.K_RIGHT]:
                 dx += 5
                 self.contador += 1
                 self.direcao = 1
-            if key[pygame.K_SPACE] and self.jumped == False and self.no_ar == False: #se ele nao estiver pulando ou no ar pode pular
+            if key[pygame.K_SPACE] and self.jumped == False and self.no_ar == False:
                 self.Vy = -15
-                self.jumped == True
-            if key[pygame.K_SPACE] == False: #coamndo pra ele parar de flutuar
+                self.jumped = True
+            if key[pygame.K_SPACE] == False:
                 self.jumped = False
-            if key[pygame.K_RIGHT] == False and key[pygame.K_LEFT] == False:
-                self.contador = 0
-                self.indice = 0
-                if self.direcao == 1: #define os frames para cada direcao
-                    self.image = self.frames_right[self.indice]
-                if self.direcao == 2:
-                    self.image = self.frames_left[self.indice]
 
-            # animação corrida
+            # Aplica a animação
+            self.atualizar_animacao(key)
 
-            if self.contador > Vcorrida:
-                self.contador = 0
-                self.indice += 1
-                if self.indice >= len(self.frames_right):
-                    self.indice = 0
-                if self.direcao == 1:
-                    self.image = self.frames_right[self.indice]
-                if self.direcao == 2:
-                    self.image = self.frames_left[self.indice]
-
-            # adiciona gravidade
+            # Aplica gravidade
             self.Vy += 1
-            if self.Vy > 10: #nao pode ultrapassar o limite
+            if self.Vy > 10:
                 self.Vy = 10
-
             dy += self.Vy
-            # checa colisão
-            self.no_ar = True
-            for tile in mundo.tile_list: #checa cada quadradinho
-                # checa em x
-                if tile[1].colliderect(self.rect.x + dx, self.rect.y, self.largura, self.comprimento):
-                    dx = 0 
-                # checa em y
-                if tile[1].colliderect(self.rect.x, self.rect.y + dy, self.largura, self.comprimento):
-                    # Analisa tds as colisoes antes de acontecer
-                    if self.Vy < 0:
-                        dy = tile[1].bottom - self.rect.top
-                        self.Vy = 0
-                    elif self.Vy >= 0:
-                        dy = tile[1].top - self.rect.bottom
-                        self.Vy = 0
-                        self.no_ar = False
 
-            # ver colisoes mortais(Inimigo ou fogo)
-            if pygame.sprite.spritecollide(self, caveiras, False):
-                game_over = 1
-            if pygame.sprite.spritecollide(self, fogos, False):
-                game_over = 1
+            # Checa colisões
+            dx, dy, game_over = self.checar_colisoes(dx, dy)
 
-            # Colisao com plataforma movel
-            for plataforma in plataformas:
-                # com x
-                if plataforma.rect.colliderect(self.rect.x + dx, self.rect.y, self.largura, self.comprimento):
-                    dx=0
-                if plataforma.rect.colliderect(self.rect.x, self.rect.y + dy, self.largura, self.comprimento):
-                    # Analisa tds as colisoes antes de acontecer (msm logica de ciima)
-                    if abs((self.rect.top +dy) -plataforma.rect.bottom)<espacoplataforma: #embaixo
-                        self.Vy=0
-                        dy = plataforma.rect.bottom - self.rect.top
-                    elif abs((self.rect.bottom+dy) -plataforma.rect.bottom)<espacoplataforma: #em cima
-                        self.rect.bottom= plataforma.rect.top-1
-                        dy=0
-                        self.no_ar=False 
-                    if plataforma.move_x!=0:
-                        self.rect.x+= plataforma.direcao
-
-
-                    
-                        
-            # atualiza posição jogador
+            # Atualiza posição
             self.rect.x += dx
             self.rect.y += dy
 
         if self.rect.bottom > SCREEN_HEIGHT:
             self.rect.bottom = SCREEN_HEIGHT
 
-        #imprime player morto e preenche variavel game over
-        elif game_over == 1:
+        if game_over == 1:
             self.image = self.morto
-        # desenha jogador
+
         screen.blit(self.image, self.rect)
         return game_over
+
+
     #funcao de reset utilizada na class Player
     def reset(self, x, y):
         self.frames_right = []
@@ -444,3 +446,4 @@ while run:
     pygame.display.update()
 pygame.quit()
         
+#teste
